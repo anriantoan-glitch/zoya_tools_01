@@ -11,7 +11,7 @@ os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/src/.pw-b
 from flask import Flask, jsonify, render_template, request, send_file
 from playwright.sync_api import sync_playwright
 
-from download_traces import read_suppliers, run
+from download_traces import ensure_playwright_browsers, read_suppliers, run
 
 
 APP_ROOT = Path(__file__).resolve().parent
@@ -104,6 +104,7 @@ def download():
             def on_progress(current: int, total: int, ok: int) -> None:
                 update_job(job_id, current=current, total=total, ok=ok)
 
+            ensure_playwright_browsers()
             with sync_playwright() as playwright:
                 run(
                     playwright=playwright,

@@ -2,6 +2,7 @@ import argparse
 import csv
 import os
 import re
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -13,6 +14,21 @@ from playwright.sync_api import Playwright, sync_playwright, TimeoutError as PWT
 
 
 BASE_URL = "https://webgate.ec.europa.eu/tracesnt/directory/publication/organic-operator/index"
+BROWSERS_PATH = Path(os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "")).expanduser()
+
+
+def ensure_playwright_browsers() -> None:
+    if not BROWSERS_PATH:
+        return
+    chromium_glob = BROWSERS_PATH.glob("chromium-*/chrome-linux/chrome")
+    if any(chromium_glob):
+        return
+    BROWSERS_PATH.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [sys.executable, "-m", "playwright", "install", "chromium"],
+        check=True,
+        env={**os.environ, "PLAYWRIGHT_BROWSERS_PATH": str(BROWSERS_PATH)},
+    )
 
 
 def slugify(value: str) -> str:
@@ -184,6 +200,7 @@ def main() -> int:
         return 1
 
     out_dir = Path(args.out)
+    ensure_playwright_browsers()
     with sync_playwright() as playwright:
         run(
             playwright,
