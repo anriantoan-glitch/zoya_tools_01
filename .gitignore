@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+downloads/
+web_runs/
+log
+log.pub
