@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: traces-organic-certificates
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python -m playwright install --with-deps chromium
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
