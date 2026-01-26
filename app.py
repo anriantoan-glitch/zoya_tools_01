@@ -14,7 +14,7 @@ from download_traces import read_suppliers, run
 
 APP_ROOT = Path(__file__).resolve().parent
 RUNS_DIR = APP_ROOT / "web_runs"
-os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "0")
+os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/src/.pw-browsers")
 JOBS: dict[str, dict] = {}
 JOBS_LOCK = Lock()
 
