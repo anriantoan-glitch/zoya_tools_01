@@ -118,26 +118,79 @@ def find_search_button(page):
     return None
 
 
+def normalize_text(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", value.lower())
+
+
+def handle_cookie_banner(page) -> None:
+    candidates = [
+        "button:has-text('Accept')",
+        "button:has-text('Accept all')",
+        "button:has-text('I agree')",
+        "button:has-text('Agree')",
+        "button:has-text('Allow all')",
+    ]
+    for selector in candidates:
+        loc = page.locator(selector)
+        item = first_visible(loc)
+        if item:
+            try:
+                item.click(timeout=2000)
+            except Exception:
+                pass
+            break
+
+
 def download_pdf_for_supplier(page, supplier: str, out_dir: Path, timeout_ms: int) -> bool:
     page.goto(BASE_URL, wait_until="domcontentloaded")
+    handle_cookie_banner(page)
 
     search_input = find_search_input(page)
     if not search_input:
         raise RuntimeError("Search input not found on page.")
     search_input.fill(supplier)
+    try:
+        search_input.press("Enter")
+    except Exception:
+        pass
 
     search_button = find_search_button(page)
-    if not search_button:
-        raise RuntimeError("Search button not found on page.")
-    search_button.click()
+    if search_button:
+        search_button.click()
     try:
         page.wait_for_load_state("networkidle", timeout=timeout_ms)
     except PWTimeoutError:
         pass
 
-    view_button = page.locator("button:has-text('View')").first
-    if view_button.count() == 0 or not view_button.is_visible():
+    try:
+        page.wait_for_selector("button:has-text('View')", timeout=timeout_ms)
+    except PWTimeoutError:
         return False
+
+    view_button = None
+    supplier_norm = normalize_text(supplier)
+    rows = page.locator("tr")
+    try:
+        row_count = rows.count()
+    except Exception:
+        row_count = 0
+
+    for i in range(row_count):
+        try:
+            row = rows.nth(i)
+            row_text = row.inner_text()
+            if supplier_norm and supplier_norm in normalize_text(row_text):
+                candidate = row.locator("button:has-text('View')").first
+                if candidate.count() > 0:
+                    view_button = candidate
+                    break
+        except Exception:
+            continue
+
+    if view_button is None:
+        view_button = page.locator("button:has-text('View')").first
+        if view_button.count() == 0 or not view_button.is_visible():
+            return False
 
     view_button.click()
 
