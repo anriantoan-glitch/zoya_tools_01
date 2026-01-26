@@ -7,6 +7,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Callable
+import errno
 
 os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/src/.pw-browsers")
 
@@ -24,11 +25,30 @@ def ensure_playwright_browsers() -> None:
     if any(chromium_glob):
         return
     BROWSERS_PATH.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        [sys.executable, "-m", "playwright", "install", "chromium"],
-        check=True,
-        env={**os.environ, "PLAYWRIGHT_BROWSERS_PATH": str(BROWSERS_PATH)},
-    )
+    lock_path = BROWSERS_PATH / ".install.lock"
+    with lock_path.open("w") as lock_file:
+        try:
+            import fcntl
+
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+        except Exception:
+            pass
+        # Another worker might have installed while we waited on the lock.
+        if any(BROWSERS_PATH.glob("chromium-*/chrome-linux/chrome")):
+            return
+        for attempt in range(3):
+            try:
+                subprocess.run(
+                    [sys.executable, "-m", "playwright", "install", "chromium"],
+                    check=True,
+                    env={**os.environ, "PLAYWRIGHT_BROWSERS_PATH": str(BROWSERS_PATH)},
+                )
+                return
+            except OSError as exc:
+                if exc.errno == errno.ETXTBSY and attempt < 2:
+                    time.sleep(2)
+                    continue
+                raise
 
 
 def slugify(value: str) -> str:
