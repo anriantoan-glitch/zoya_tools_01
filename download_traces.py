@@ -1,10 +1,13 @@
 import argparse
 import csv
+import os
 import re
 import sys
 import time
 from pathlib import Path
 from typing import Callable
+
+os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/src/.pw-browsers")
 
 from playwright.sync_api import Playwright, sync_playwright, TimeoutError as PWTimeoutError
 

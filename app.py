@@ -6,6 +6,8 @@ from pathlib import Path
 from threading import Lock, Thread
 from uuid import uuid4
 
+os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/src/.pw-browsers")
+
 from flask import Flask, jsonify, render_template, request, send_file
 from playwright.sync_api import sync_playwright
 
@@ -14,7 +16,6 @@ from download_traces import read_suppliers, run
 
 APP_ROOT = Path(__file__).resolve().parent
 RUNS_DIR = APP_ROOT / "web_runs"
-os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/src/.pw-browsers")
 JOBS: dict[str, dict] = {}
 JOBS_LOCK = Lock()
 
