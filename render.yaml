@@ -7,4 +7,4 @@ services:
       - key: PLAYWRIGHT_BROWSERS_PATH
         value: "0"
     buildCommand: pip install -r requirements.txt && PLAYWRIGHT_BROWSERS_PATH=0 python -m playwright install --with-deps chromium
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    startCommand: PLAYWRIGHT_BROWSERS_PATH=0 gunicorn app:app --bind 0.0.0.0:$PORT
