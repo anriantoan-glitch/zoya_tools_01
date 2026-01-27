@@ -63,17 +63,27 @@ def read_suppliers(csv_path: Path) -> list[str]:
     if not csv_path.exists():
         raise FileNotFoundError(f"Suppliers CSV not found: {csv_path}")
     suppliers: list[str] = []
-    with csv_path.open(newline="", encoding="utf-8") as f:
-        reader = csv.reader(f)
-        for row in reader:
-            if not row:
-                continue
-            value = row[0].strip()
-            if not value:
-                continue
-            if value.lower() in {"supplier", "suppliers", "name", "names"}:
-                continue
-            suppliers.append(value)
+    last_error: Exception | None = None
+    for encoding in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+        try:
+            suppliers.clear()
+            with csv_path.open(newline="", encoding=encoding) as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    if not row:
+                        continue
+                    value = row[0].strip()
+                    if not value:
+                        continue
+                    if value.lower() in {"supplier", "suppliers", "name", "names"}:
+                        continue
+                    suppliers.append(value)
+            return suppliers
+        except UnicodeDecodeError as exc:
+            last_error = exc
+            continue
+    if last_error:
+        raise last_error
     return suppliers
 
 
