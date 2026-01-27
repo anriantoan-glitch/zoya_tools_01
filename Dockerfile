@@ -10,4 +10,5 @@ COPY . /app/
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV PORT=8080
 
-CMD ["bash", "-lc", "gunicorn app:app --bind 0.0.0.0:${PORT:-8080}"]
+ENTRYPOINT ["bash", "-lc"]
+CMD ["gunicorn app:app --bind 0.0.0.0:${PORT:-8080}"]
