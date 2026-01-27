@@ -1,5 +1,7 @@
 import io
 import os
+import shutil
+import time
 import zipfile
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +18,7 @@ from download_traces import ensure_playwright_browsers, read_suppliers, run
 
 APP_ROOT = Path(__file__).resolve().parent
 RUNS_DIR = APP_ROOT / "web_runs"
+ZIP_TTL_SECONDS = 24 * 60 * 60
 JOBS: dict[str, dict] = {}
 JOBS_LOCK = Lock()
 
@@ -44,6 +47,43 @@ def append_log(job_id: str, message: str) -> None:
 
 
 app = Flask(__name__)
+
+
+def cleanup_runs() -> None:
+    cutoff = time.time() - ZIP_TTL_SECONDS
+    if not RUNS_DIR.exists():
+        return
+    for run_dir in RUNS_DIR.iterdir():
+        if not run_dir.is_dir():
+            continue
+        try:
+            mtime = run_dir.stat().st_mtime
+        except OSError:
+            continue
+        if mtime < cutoff:
+            shutil.rmtree(run_dir, ignore_errors=True)
+
+    with JOBS_LOCK:
+        stale_ids = []
+        for job_id, job in JOBS.items():
+            zip_path = Path(job.get("zip_path", ""))
+            try:
+                mtime = zip_path.stat().st_mtime
+            except OSError:
+                mtime = 0
+            if mtime and mtime < cutoff:
+                stale_ids.append(job_id)
+        for job_id in stale_ids:
+            JOBS.pop(job_id, None)
+
+
+def cleanup_loop() -> None:
+    while True:
+        cleanup_runs()
+        time.sleep(60 * 60)
+
+
+Thread(target=cleanup_loop, daemon=True).start()
 
 
 @app.get("/")
