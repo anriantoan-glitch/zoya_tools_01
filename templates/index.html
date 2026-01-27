@@ -173,6 +173,21 @@
       .download-link:hover {
         background: #2a3a2f;
       }
+      .stop-btn {
+        margin-top: 12px;
+        margin-left: 10px;
+        background: #d1633b;
+        color: #fff;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 999px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 10px 20px rgba(209, 99, 59, 0.2);
+      }
+      .stop-btn:hover {
+        background: #b5532f;
+      }
       @keyframes fade {
         from {
           opacity: 0;
@@ -265,6 +280,7 @@
           </div>
           <div class="logs" id="logBox">Waiting for logs…</div>
           <a class="download-link" id="downloadLink" href="#" style="display: none;">Download ZIP</a>
+          <button class="stop-btn" id="stopBtn" type="button" style="display: none;">Stop</button>
         </div>
       </div>
       <div class="footer">All Rights Reserved © 2026 produce for Zoya BG by anri@zoya.bg</div>
@@ -277,6 +293,7 @@
       const progressFill = document.getElementById("progressFill");
       const logBox = document.getElementById("logBox");
       const downloadLink = document.getElementById("downloadLink");
+      const stopBtn = document.getElementById("stopBtn");
 
       function renderStatus(data) {
         if (data.status === "running") {
@@ -285,14 +302,21 @@
           const percent = total > 0 ? Math.round((current / total) * 100) : 0;
           statusText.textContent = `Running: ${current}/${total} suppliers (${data.ok} downloaded)`;
           progressFill.style.width = `${percent}%`;
+          stopBtn.style.display = "inline-flex";
         } else if (data.status === "done") {
           statusText.textContent = "Done. Your ZIP is ready.";
           progressFill.style.width = "100%";
           downloadLink.href = `/result/${jobId}`;
           downloadLink.style.display = "inline-flex";
+          stopBtn.style.display = "none";
+        } else if (data.status === "cancelled") {
+          statusText.textContent = "Cancelled.";
+          progressFill.style.width = "0%";
+          stopBtn.style.display = "none";
         } else if (data.status === "error") {
           statusText.textContent = `Error: ${data.error}`;
           progressFill.style.width = "0%";
+          stopBtn.style.display = "none";
         }
 
         if (data.logs && data.logs.length > 0) {
@@ -318,6 +342,13 @@
           setTimeout(poll, 2000);
         }
       }
+
+      stopBtn.addEventListener("click", async () => {
+        stopBtn.disabled = true;
+        stopBtn.textContent = "Stopping...";
+        await fetch(`/cancel/${jobId}`, { method: "POST" });
+        setTimeout(poll, 500);
+      });
 
       poll();
     </script>

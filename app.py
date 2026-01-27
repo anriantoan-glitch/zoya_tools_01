@@ -127,6 +127,7 @@ def download():
             "error": None,
             "logs": [],
             "zip_path": str(zip_path),
+            "cancel": False,
         }
 
     def worker() -> None:
@@ -144,6 +145,11 @@ def download():
             def on_progress(current: int, total: int, ok: int) -> None:
                 update_job(job_id, current=current, total=total, ok=ok)
 
+            def should_cancel() -> bool:
+                with JOBS_LOCK:
+                    job = JOBS.get(job_id)
+                    return bool(job and job.get("cancel"))
+
             ensure_playwright_browsers()
             with sync_playwright() as playwright:
                 run(
@@ -155,12 +161,16 @@ def download():
                     delay_seconds=delay_seconds,
                     on_message=on_message,
                     on_progress=on_progress,
+                    should_cancel=should_cancel,
                 )
 
             if not out_dir.exists():
                 update_job(job_id, status="error", error="No downloads were created.")
                 return
 
+            if should_cancel():
+                update_job(job_id, status="cancelled")
+                return
             create_zip_file(out_dir, zip_path)
             update_job(job_id, status="done")
         except Exception as exc:
@@ -177,6 +187,18 @@ def status(job_id: str):
         if not job:
             return jsonify({"status": "missing"}), 404
         return jsonify(job)
+
+
+@app.post("/cancel/<job_id>")
+def cancel(job_id: str):
+    with JOBS_LOCK:
+        job = JOBS.get(job_id)
+        if not job:
+            return jsonify({"status": "missing"}), 404
+        if job["status"] != "running":
+            return jsonify({"status": job["status"]}), 400
+        job["cancel"] = True
+    return jsonify({"status": "cancelling"})
 
 
 @app.get("/result/<job_id>")

@@ -233,6 +233,7 @@ def run(
     delay_seconds: int,
     on_message: Callable[[str], None] | None = None,
     on_progress: Callable[[int, int, int], None] | None = None,
+    should_cancel: Callable[[], bool] | None = None,
 ):
     browser = playwright.chromium.launch(headless=not headed)
     context = browser.new_context(accept_downloads=True)
@@ -247,6 +248,9 @@ def run(
             on_message(message)
 
     for i, supplier in enumerate(suppliers, start=1):
+        if should_cancel and should_cancel():
+            log("  -> cancelled")
+            break
         log(f"[{i}/{total}] {supplier}")
         try:
             success = download_pdf_for_supplier(page, supplier, out_dir, timeout_ms)
