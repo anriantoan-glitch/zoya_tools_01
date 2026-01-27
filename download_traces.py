@@ -5,6 +5,7 @@ import re
 import subprocess
 import sys
 import time
+from urllib.parse import quote_plus
 from pathlib import Path
 from typing import Callable
 import errno
@@ -142,28 +143,29 @@ def handle_cookie_banner(page) -> None:
 
 
 def download_pdf_for_supplier(page, supplier: str, out_dir: Path, timeout_ms: int) -> bool:
-    page.goto(BASE_URL, wait_until="domcontentloaded")
+    search_url = f"{BASE_URL}#!?query={quote_plus(supplier)}&sort=-issuedOn"
+    page.goto(search_url, wait_until="domcontentloaded")
     handle_cookie_banner(page)
 
+    # If the query param didn't bind for any reason, fall back to manual search.
     search_input = find_search_input(page)
-    if not search_input:
-        raise RuntimeError("Search input not found on page.")
-    search_input.fill(supplier)
-    try:
-        search_input.press("Enter")
-    except Exception:
-        pass
-
-    search_button = find_search_button(page)
-    if search_button:
-        search_button.click()
+    if search_input:
+        search_input.fill(supplier)
+        try:
+            search_input.press("Enter")
+        except Exception:
+            pass
+        search_button = find_search_button(page)
+        if search_button:
+            search_button.click()
     try:
         page.wait_for_load_state("networkidle", timeout=timeout_ms)
     except PWTimeoutError:
         pass
 
+    view_selector = "button:has-text('View'), a:has-text('View')"
     try:
-        page.wait_for_selector("button:has-text('View')", timeout=timeout_ms)
+        page.wait_for_selector(view_selector, timeout=timeout_ms)
     except PWTimeoutError:
         return False
 
@@ -180,7 +182,7 @@ def download_pdf_for_supplier(page, supplier: str, out_dir: Path, timeout_ms: in
             row = rows.nth(i)
             row_text = row.inner_text()
             if supplier_norm and supplier_norm in normalize_text(row_text):
-                candidate = row.locator("button:has-text('View')").first
+                candidate = row.locator(view_selector).first
                 if candidate.count() > 0:
                     view_button = candidate
                     break
@@ -188,13 +190,15 @@ def download_pdf_for_supplier(page, supplier: str, out_dir: Path, timeout_ms: in
             continue
 
     if view_button is None:
-        view_button = page.locator("button:has-text('View')").first
+        view_button = page.locator(view_selector).first
         if view_button.count() == 0 or not view_button.is_visible():
             return False
 
     view_button.click()
 
     pdf_item = page.locator("text=PDF certificate").first
+    if pdf_item.count() == 0:
+        pdf_item = page.locator("a[href$='.pdf']").first
     if pdf_item.count() == 0:
         return False
 
