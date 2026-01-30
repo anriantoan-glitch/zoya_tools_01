@@ -175,6 +175,19 @@
       .download-link:hover {
         background: #2b3242;
       }
+      .arrow-callout {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .arrow-callout svg {
+        width: 36px;
+        height: 18px;
+      }
       .stop-btn {
         margin-top: 12px;
         margin-left: 10px;
@@ -312,6 +325,13 @@
         <a class="download-link" href="https://script.google.com/macros/s/AKfycbzgKT8gI2wnGpv-pzKMujGHXIlM0PmINgWsq3NFrbyM_JDa4izij22WR3t3D6FXo3vsqg/exec" target="_blank" rel="noopener noreferrer">
           Put the PDFs in order
         </a>
+        <div class="arrow-callout" aria-hidden="true">
+          <svg viewBox="0 0 60 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1 10H52" stroke="#8a9099" stroke-width="2" stroke-linecap="round"/>
+            <path d="M46 4L52 10L46 16" stroke="#8a9099" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Click the button
+        </div>
       </div>
       <div class="footer">All Rights Reserved © 2026 produce for Zoya BG by anri@zoya.bg</div>
     </div>
