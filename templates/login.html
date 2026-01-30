@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap");
+
+      :root {
+        color-scheme: light;
+        --ink: #1b1b1f;
+        --muted: #5b6169;
+        --accent: #ff6a3d;
+        --accent-dark: #e2552b;
+        --soft: #f6f7fb;
+        --card: #ffffff;
+        --line: #e7e9ee;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Sora", "Trebuchet MS", sans-serif;
+        background:
+          radial-gradient(circle at 10% 0%, rgba(255, 106, 61, 0.12), transparent 40%),
+          radial-gradient(circle at 90% 5%, rgba(73, 99, 255, 0.1), transparent 45%),
+          linear-gradient(180deg, #fbfbfd, #f4f6fb);
+        color: var(--ink);
+        margin: 0;
+        padding: 64px 24px;
+      }
+      .wrap {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        box-shadow: 0 18px 40px rgba(20, 20, 30, 0.08);
+        padding: 32px;
+        border-radius: 22px;
+      }
+      h1 {
+        font-family: "Playfair Display", "Georgia", serif;
+        font-size: 32px;
+        margin: 0 0 10px;
+      }
+      p {
+        margin: 0 0 16px;
+        color: var(--muted);
+      }
+      .error {
+        background: #ffe2d9;
+        border: 1px solid #f1b5a8;
+        color: #6d1d0d;
+        padding: 10px 12px;
+        border-radius: 8px;
+        margin: 12px 0 18px;
+      }
+      .login-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        padding: 12px 18px;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: 15px;
+        text-decoration: none;
+        box-shadow: 0 12px 26px rgba(255, 106, 61, 0.2);
+      }
+      .login-btn:hover {
+        background: var(--accent-dark);
+        transform: translateY(-1px);
+      }
+      .note {
+        margin-top: 14px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>EU TRACES Organic Certificates</h1>
+        <p>Please sign in to continue.</p>
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+        <a class="login-btn" href="/login/google">Login with Google (Zoya only)</a>
+        <div class="note">Only @zoya.bg accounts are allowed.</div>
+      </div>
+    </div>
+  </body>
+</html>

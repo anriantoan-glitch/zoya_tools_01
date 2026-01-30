@@ -74,6 +74,7 @@ oauth.register(
     server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
     client_kwargs={"scope": "openid email profile"},
 )
+ALLOWED_EMAIL_DOMAIN = os.environ.get("ALLOWED_EMAIL_DOMAIN", "zoya.bg").lower()
 
 
 def login_required(fn):
@@ -289,6 +290,14 @@ def add_security_headers(response):
 def login():
     if session.get("user"):
         return redirect(url_for("index"))
+    error = request.args.get("error")
+    return render_template("login.html", error=error)
+
+
+@app.get("/login/google")
+def login_google():
+    if session.get("user"):
+        return redirect(url_for("index"))
     redirect_uri = os.environ.get("OAUTH_REDIRECT_URL") or url_for("auth", _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
@@ -299,6 +308,10 @@ def auth():
     userinfo = token.get("userinfo")
     if not userinfo:
         userinfo = oauth.google.parse_id_token(token)
+    email = (userinfo.get("email") or "").lower()
+    if not email.endswith(f"@{ALLOWED_EMAIL_DOMAIN}"):
+        session.pop("user", None)
+        return redirect(url_for("login", error="Only Zoya accounts are allowed."))
     session["user"] = {
         "email": userinfo.get("email"),
         "name": userinfo.get("name"),
