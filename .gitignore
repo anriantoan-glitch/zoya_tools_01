@@ -5,3 +5,4 @@ downloads/
 web_runs/
 log
 log.pub
+.devcontainer/
