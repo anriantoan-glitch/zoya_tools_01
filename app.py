@@ -8,7 +8,12 @@ from pathlib import Path
 from threading import Lock, Thread
 from uuid import uuid4
 
-os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/src/.pw-browsers")
+DEFAULT_PW_PATH = "/ms-playwright"
+FALLBACK_PW_PATH = "/opt/render/project/src/.pw-browsers"
+if "PLAYWRIGHT_BROWSERS_PATH" not in os.environ:
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = (
+        DEFAULT_PW_PATH if Path(DEFAULT_PW_PATH).exists() else FALLBACK_PW_PATH
+    )
 
 from flask import Flask, jsonify, redirect, render_template, request, send_file, session, url_for
 from authlib.integrations.flask_client import OAuth

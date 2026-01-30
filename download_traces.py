@@ -10,7 +10,12 @@ from pathlib import Path
 from typing import Callable
 import errno
 
-os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/src/.pw-browsers")
+DEFAULT_PW_PATH = "/ms-playwright"
+FALLBACK_PW_PATH = "/opt/render/project/src/.pw-browsers"
+if "PLAYWRIGHT_BROWSERS_PATH" not in os.environ:
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = (
+        DEFAULT_PW_PATH if Path(DEFAULT_PW_PATH).exists() else FALLBACK_PW_PATH
+    )
 
 from playwright.sync_api import Playwright, sync_playwright, TimeoutError as PWTimeoutError
 
