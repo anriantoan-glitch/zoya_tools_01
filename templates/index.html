@@ -61,6 +61,25 @@
         border: 1px solid rgba(255, 106, 61, 0.25);
         font-weight: 600;
       }
+      .badge-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .logout-link {
+        text-decoration: none;
+        color: #1f2430;
+        font-weight: 600;
+        font-size: 13px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+      .logout-link:hover {
+        border-color: #cfd4de;
+        box-shadow: 0 8px 16px rgba(31, 36, 48, 0.12);
+      }
       .grid {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -255,7 +274,12 @@
           <h1>EU TRACES Organic Certificates</h1>
           <p>Upload a supplier list and get a clean ZIP of PDFs, fast.</p>
         </div>
-        <div class="badge">Zoya Buyers Only</div>
+        <div class="badge-actions">
+          <div class="badge">Zoya Buyers Only</div>
+          {% if session.user %}
+          <a class="logout-link" href="/logout">Logout</a>
+          {% endif %}
+        </div>
       </div>
 
       <div class="card step-card">Step 1 – TRACES extraction</div>

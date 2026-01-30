@@ -10,7 +10,8 @@ from uuid import uuid4
 
 os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/src/.pw-browsers")
 
-from flask import Flask, jsonify, render_template, request, send_file
+from flask import Flask, jsonify, redirect, render_template, request, send_file, session, url_for
+from authlib.integrations.flask_client import OAuth
 from playwright.sync_api import sync_playwright
 
 from download_traces import ensure_playwright_browsers, read_suppliers, run
@@ -56,6 +57,28 @@ def append_log(job_id: str, message: str) -> None:
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", os.urandom(24))
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE", "1") == "1"
+
+oauth = OAuth(app)
+oauth.register(
+    name="google",
+    client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
+
+
+def login_required(fn):
+    def wrapper(*args, **kwargs):
+        if not session.get("user"):
+            return redirect(url_for("login"))
+        return fn(*args, **kwargs)
+
+    wrapper.__name__ = fn.__name__
+    return wrapper
 
 
 def cleanup_runs() -> None:
@@ -96,11 +119,13 @@ Thread(target=cleanup_loop, daemon=True).start()
 
 
 @app.get("/")
+@login_required
 def index():
     return render_template("index.html", job_id=None, error=None)
 
 
 @app.post("/download")
+@login_required
 def download():
     upload = request.files.get("csv_file")
     if upload is None or upload.filename == "":
@@ -194,6 +219,7 @@ def download():
 
 
 @app.get("/status/<job_id>")
+@login_required
 def status(job_id: str):
     with JOBS_LOCK:
         job = JOBS.get(job_id)
@@ -203,6 +229,7 @@ def status(job_id: str):
 
 
 @app.post("/cancel/<job_id>")
+@login_required
 def cancel(job_id: str):
     with JOBS_LOCK:
         job = JOBS.get(job_id)
@@ -215,6 +242,7 @@ def cancel(job_id: str):
 
 
 @app.get("/result/<job_id>")
+@login_required
 def result(job_id: str):
     with JOBS_LOCK:
         job = JOBS.get(job_id)
@@ -250,6 +278,34 @@ def add_security_headers(response):
         "frame-ancestors 'none'; "
     )
     return response
+
+
+@app.get("/login")
+def login():
+    if session.get("user"):
+        return redirect(url_for("index"))
+    redirect_uri = os.environ.get("OAUTH_REDIRECT_URL") or url_for("auth", _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+@app.get("/auth")
+def auth():
+    token = oauth.google.authorize_access_token()
+    userinfo = token.get("userinfo")
+    if not userinfo:
+        userinfo = oauth.google.parse_id_token(token)
+    session["user"] = {
+        "email": userinfo.get("email"),
+        "name": userinfo.get("name"),
+        "picture": userinfo.get("picture"),
+    }
+    return redirect(url_for("index"))
+
+
+@app.get("/logout")
+def logout():
+    session.pop("user", None)
+    return redirect(url_for("index"))
 
 
 if __name__ == "__main__":
