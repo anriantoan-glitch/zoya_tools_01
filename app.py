@@ -19,6 +19,13 @@ from download_traces import ensure_playwright_browsers, read_suppliers, run
 APP_ROOT = Path(__file__).resolve().parent
 RUNS_DIR = APP_ROOT / "web_runs"
 ZIP_TTL_SECONDS = 24 * 60 * 60
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+ALLOWED_MIME_TYPES = {
+    "text/csv",
+    "application/csv",
+    "application/vnd.ms-excel",
+    "text/plain",
+}
 JOBS: dict[str, dict] = {}
 JOBS_LOCK = Lock()
 
@@ -47,6 +54,8 @@ def append_log(job_id: str, message: str) -> None:
 
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", os.urandom(24))
 
 
 def cleanup_runs() -> None:
@@ -96,6 +105,10 @@ def download():
     upload = request.files.get("csv_file")
     if upload is None or upload.filename == "":
         return render_template("index.html", job_id=None, error="Please upload a CSV file.")
+    if upload.mimetype not in ALLOWED_MIME_TYPES:
+        return render_template("index.html", job_id=None, error="Invalid file type. Please upload a CSV.")
+    if not upload.filename.lower().endswith(".csv"):
+        return render_template("index.html", job_id=None, error="Invalid file name. Please upload a .csv file.")
 
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -221,5 +234,23 @@ def result(job_id: str):
     )
 
 
+@app.after_request
+def add_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "img-src 'self' data:; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src https://fonts.gstatic.com; "
+        "script-src 'self'; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'; "
+    )
+    return response
+
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
