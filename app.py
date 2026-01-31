@@ -154,9 +154,9 @@ def download():
     except ValueError:
         delay_seconds = 10
     try:
-        timeout_ms = int(request.form.get("timeout_ms", "45000"))
+        timeout_ms = int(request.form.get("timeout_ms", "15000"))
     except ValueError:
-        timeout_ms = 45000
+        timeout_ms = 15000
 
     job_id = uuid4().hex
     out_dir = job_dir / "downloads"

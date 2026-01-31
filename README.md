@@ -19,7 +19,7 @@ python download_traces.py --suppliers suppliers.csv --out downloads --headed
 
 Options:
 - `--headed` shows the browser.
-- `--timeout 45000` changes the download timeout (ms).
+- `--timeout 15000` changes the download timeout (ms).
 - `--delay 10` adds a delay between suppliers (seconds).
 - `--out downloads` sets the local download folder.
 

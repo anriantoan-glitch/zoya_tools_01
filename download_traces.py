@@ -158,64 +158,71 @@ def handle_cookie_banner(page) -> None:
 
 
 def download_pdf_for_supplier(page, supplier: str, out_dir: Path, timeout_ms: int) -> bool:
-    search_url = f"{BASE_URL}#!?query={quote_plus(supplier)}&sort=-issuedOn"
-    page.goto(search_url, wait_until="domcontentloaded")
-    handle_cookie_banner(page)
-
-    # If the query param didn't bind for any reason, fall back to manual search.
-    search_input = find_search_input(page)
-    if search_input:
-        search_input.fill(supplier)
-        try:
-            search_input.press("Enter")
-        except Exception:
-            pass
-        search_button = find_search_button(page)
-        if search_button:
-            search_button.click()
-    try:
-        page.wait_for_load_state("networkidle", timeout=timeout_ms)
-    except PWTimeoutError:
-        pass
+    queries = [supplier]
+    if "ß" in supplier:
+        alt = supplier.replace("ß", "ss")
+        if alt != supplier:
+            queries.append(alt)
 
     view_selector = "button:has-text('View'), a:has-text('View')"
-    try:
-        page.wait_for_selector(view_selector, timeout=timeout_ms)
-    except PWTimeoutError:
-        return False
+    for query in queries:
+        search_url = f"{BASE_URL}#!?query={quote_plus(query)}&sort=-issuedOn"
+        page.goto(search_url, wait_until="domcontentloaded")
+        handle_cookie_banner(page)
 
-    view_button = None
-    supplier_norm = normalize_text(supplier)
-    rows = page.locator("tr")
-    try:
-        row_count = rows.count()
-    except Exception:
-        row_count = 0
-
-    for i in range(row_count):
+        # If the query param didn't bind for any reason, fall back to manual search.
+        search_input = find_search_input(page)
+        if search_input:
+            search_input.fill(query)
+            try:
+                search_input.press("Enter")
+            except Exception:
+                pass
+            search_button = find_search_button(page)
+            if search_button:
+                search_button.click()
         try:
-            row = rows.nth(i)
-            row_text = row.inner_text()
-            if supplier_norm and supplier_norm in normalize_text(row_text):
-                candidate = row.locator(view_selector).first
-                if candidate.count() > 0:
-                    view_button = candidate
-                    break
-        except Exception:
+            page.wait_for_load_state("networkidle", timeout=timeout_ms)
+        except PWTimeoutError:
+            pass
+
+        try:
+            page.wait_for_selector(view_selector, timeout=timeout_ms)
+        except PWTimeoutError:
             continue
 
-    if view_button is None:
-        view_button = page.locator(view_selector).first
-        if view_button.count() == 0 or not view_button.is_visible():
-            return False
+        view_button = None
+        supplier_norm = normalize_text(query)
+        rows = page.locator("tr")
+        try:
+            row_count = rows.count()
+        except Exception:
+            row_count = 0
 
-    view_button.click()
+        for i in range(row_count):
+            try:
+                row = rows.nth(i)
+                row_text = row.inner_text()
+                if supplier_norm and supplier_norm in normalize_text(row_text):
+                    candidate = row.locator(view_selector).first
+                    if candidate.count() > 0:
+                        view_button = candidate
+                        break
+            except Exception:
+                continue
 
-    pdf_item = page.locator("text=PDF certificate").first
-    if pdf_item.count() == 0:
-        pdf_item = page.locator("a[href$='.pdf']").first
-    if pdf_item.count() == 0:
-        return False
+        if view_button is None:
+            view_button = page.locator(view_selector).first
+            if view_button.count() == 0 or not view_button.is_visible():
+                continue
+
+        view_button.click()
+
+        pdf_item = page.locator("text=PDF certificate").first
+        if pdf_item.count() == 0:
+            pdf_item = page.locator("a[href$='.pdf']").first
+        if pdf_item.count() == 0:
+            continue
 
     out_dir.mkdir(parents=True, exist_ok=True)
     safe_name = slugify(supplier)
@@ -283,7 +290,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--suppliers", default="suppliers.csv", help="Path to suppliers CSV")
     parser.add_argument("--out", default="downloads", help="Output folder for PDFs")
     parser.add_argument("--headed", action="store_true", help="Run browser in headed mode")
-    parser.add_argument("--timeout", type=int, default=45000, help="Download timeout in ms")
+    parser.add_argument("--timeout", type=int, default=15000, help="Download timeout in ms")
     parser.add_argument("--delay", type=int, default=10, help="Delay between suppliers in seconds")
     return parser.parse_args()
 
